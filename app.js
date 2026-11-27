@@ -12,7 +12,7 @@ const fmt = cents => eur.format((cents || 0) / 100);
 const toCents = v => Math.round(parseFloat(String(v).replace(',', '.')) * 100);
 const centsToInput = c => (c == null ? '' : (c / 100).toFixed(2).replace(/\.00$/, '').replace('.', ','));
 const dayKey = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = s => document.querySelector(s);
 
 const DEFAULT_PRODUCTS = () => [
@@ -31,7 +31,7 @@ const DEFAULT_PRODUCTS = () => [
 ];
 
 function load(key, fallback) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
 }
 function save(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { toast('⚠️ Speichern fehlgeschlagen'); }
@@ -183,8 +183,9 @@ function makeNumpad(padEl, displayEl, onChange) {
   const value = () => (str ? Math.round(parseFloat(str.replace(',', '.') || '0') * 100) || 0 : 0);
   const update = () => { displayEl.textContent = str ? `${str} €` : '0,00 €'; onChange && onChange(value()); };
   padEl.addEventListener('click', e => {
-    const k = e.target.closest('[data-k]')?.dataset.k;
-    if (!k) return;
+    const kb = e.target.closest('[data-k]');
+    if (!kb) return;
+    const k = kb.dataset.k;
     if (k === '⌫') str = str.slice(0, -1);
     else if (k === ',') { if (!str.includes(',')) str = (str || '0') + ','; }
     else {
@@ -281,8 +282,9 @@ $('#undoSale').addEventListener('click', () => {
     // Bestellung wiederherstellen, damit man korrigieren kann
     state.cart = sale.items.map(i => {
       const p = state.products.find(x => x.id === i.productId);
-      const optionId = i.option === 'Freier Preis' ? 'custom' : (p?.options.find(o => o.name === i.option)?.id ?? null);
-      return { key: `${i.productId}|${optionId ?? ''}|${i.price}`, productId: i.productId, optionId, name: i.name, emoji: p?.emoji || '', option: i.option, price: i.price, qty: i.qty };
+      const found = p ? p.options.find(o => o.name === i.option) : null;
+      const optionId = i.option === 'Freier Preis' ? 'custom' : (found ? found.id : null);
+      return { key: `${i.productId}|${optionId || ''}|${i.price}`, productId: i.productId, optionId, name: i.name, emoji: p ? p.emoji : '', option: i.option, price: i.price, qty: i.qty };
     });
     saveCart(); renderCart(); renderGrid();
     toast('Verkauf storniert – Bestellung wiederhergestellt');
@@ -319,7 +321,7 @@ function renderStats() {
   const revenue = sales.reduce((s, x) => s + x.total, 0);
   const items = sales.reduce((s, x) => s + x.items.reduce((a, i) => a + i.qty, 0), 0);
   const start = day === 'all' ? 0 : (state.startCash[day] || 0);
-  $('#startCash').value = day === 'all' ? '' : centsToInput(state.startCash[day] ?? null);
+  $('#startCash').value = day === 'all' ? '' : centsToInput(state.startCash[day] == null ? null : state.startCash[day]);
   $('#startCash').disabled = day === 'all';
 
   $('#kpis').innerHTML = `
@@ -347,7 +349,7 @@ function renderStats() {
         const p = state.products.find(x => x.name === name);
         const subs = [...g.opts.entries()].sort((a, b) => b[1].qty - a[1].qty);
         const showSubs = !(subs.length === 1 && subs[0][0] === '–');
-        return `<tr class="group"><td>${esc(p?.emoji || '')} ${esc(name)}</td><td class="num">${g.qty}</td><td class="num">${fmt(g.sum)}</td></tr>` +
+        return `<tr class="group"><td>${esc(p ? p.emoji : '')} ${esc(name)}</td><td class="num">${g.qty}</td><td class="num">${fmt(g.sum)}</td></tr>` +
           (showSubs ? subs.map(([on, o]) => `<tr class="sub"><td>${esc(on)}</td><td class="num">${o.qty}</td><td class="num">${fmt(o.sum)}</td></tr>`).join('') : '');
       }).join('')
     : '<tr><td class="empty">Noch keine Verkäufe</td></tr>';
@@ -408,6 +410,31 @@ $('#exportCsv').addEventListener('click', () => {
   download(`kasse-${day}.csv`, '﻿' + lines.join('\n'), 'text/csv');
 });
 
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsText(file);
+  });
+}
+
+// Alte iPads (iOS < 13) können keine Dateien herunterladen → Text zum Kopieren anzeigen
+const OLD_IOS = /(iPad|iPhone|iPod).*OS (\d+)_/.test(navigator.userAgent) && +RegExp.$2 < 13;
+
+function showText(filename, content) {
+  $('#textTitle').textContent = filename;
+  $('#textArea').value = content.replace(/^\ufeff/, '');
+  $('#textModal').hidden = false;
+}
+$('#copyText').addEventListener('click', () => {
+  const ta = $('#textArea');
+  ta.focus(); ta.setSelectionRange(0, ta.value.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  toast(ok ? 'Kopiert ✓ – z. B. in Notizen oder Mail einfügen' : 'Bitte Text markieren und kopieren');
+});
+
 async function download(filename, content, type) {
   const blob = new Blob([content], { type });
   try {
@@ -417,6 +444,7 @@ async function download(filename, content, type) {
       return;
     }
   } catch (e) { if (e.name === 'AbortError') return; }
+  if (OLD_IOS) { showText(filename, content); return; }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
@@ -495,7 +523,7 @@ editor.addEventListener('click', e => {
 $('#addProduct').addEventListener('click', () => {
   state.products.push({ id: uid(), name: 'Neues Produkt', emoji: '⭐', color: '#e6b450', price: 300, customPrice: false, options: [] });
   saveProducts(); renderEditor();
-  editor.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
+  if (editor.lastElementChild) editor.lastElementChild.scrollIntoView();
 });
 
 $('#resetProducts').addEventListener('click', () => {
@@ -513,7 +541,7 @@ $('#importBackup').addEventListener('change', async e => {
   e.target.value = '';
   if (!file) return;
   try {
-    const data = JSON.parse(await file.text());
+    const data = JSON.parse(await readFileText(file));
     if (!Array.isArray(data.products)) throw new Error('kein Backup');
     const mode = confirm('Backup laden: OK = Verkäufe zusammenführen, Abbrechen = nur Produkte übernehmen');
     state.products = data.products; saveProducts();
@@ -536,4 +564,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 // Speicher möglichst dauerhaft machen (schützt vor automatischem Löschen)
-navigator.storage?.persist?.();
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+// iOS: :active-Effekte bei Touch aktivieren
+document.addEventListener('touchstart', function () {}, { passive: true });

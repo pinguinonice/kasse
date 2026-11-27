@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <header class="topbar">
@@ -123,8 +123,20 @@
     </div>
   </div>
 
+  <div class="modal" id="textModal" hidden>
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2 id="textTitle">Export</h2>
+        <button class="btn ghost small" data-close>✕</button>
+      </div>
+      <p class="label">Dieses iPad kann keine Dateien speichern. Text kopieren und z. B. in Notizen oder eine Mail einfügen:</p>
+      <textarea id="textArea" readonly></textarea>
+      <button class="btn pay" id="copyText">Alles kopieren</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

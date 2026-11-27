@@ -1,5 +1,5 @@
 // Offline-Cache: App funktioniert auch ohne WLAN am Stand.
-const CACHE = 'kasse-v1';
+const CACHE = 'kasse-v2';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
