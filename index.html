@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Weihnachtsmarkt Kasse</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kasse">
+  <meta name="theme-color" content="#1b1412">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🎄 Kasse</div>
+    <nav class="tabs">
+      <button class="tab active" data-view="kasse">Kasse</button>
+      <button class="tab" data-view="stats">Tagesübersicht</button>
+      <button class="tab" data-view="products">Produkte</button>
+    </nav>
+  </header>
+
+  <!-- ============ KASSE ============ -->
+  <main id="view-kasse" class="view active">
+    <section class="products" id="productGrid"></section>
+    <aside class="cart">
+      <div class="cart-head">
+        <h2>Bestellung</h2>
+        <button class="btn ghost small" id="clearCart">Leeren</button>
+      </div>
+      <ul class="cart-list" id="cartList"></ul>
+      <div class="cart-foot">
+        <div class="total-row"><span>Summe</span><strong id="cartTotal">0,00 €</strong></div>
+        <button class="btn pay" id="payBtn" disabled>Kassieren</button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ============ STATISTIK ============ -->
+  <main id="view-stats" class="view">
+    <div class="stats-wrap">
+      <div class="stats-toolbar">
+        <label>Tag <select id="statsDay"></select></label>
+        <label>Wechselgeld zu Beginn <input id="startCash" type="number" inputmode="decimal" step="0.5" min="0" placeholder="0"></label>
+        <span class="spacer"></span>
+        <button class="btn ghost small" id="exportCsv">CSV exportieren</button>
+      </div>
+      <div class="kpis" id="kpis"></div>
+      <div class="stats-grid">
+        <section class="panel">
+          <h3>Verkauft</h3>
+          <table class="tbl" id="statsTable"></table>
+        </section>
+        <section class="panel">
+          <h3>Umsatz pro Stunde</h3>
+          <div class="hours" id="hourChart"></div>
+          <h3 class="mt">Letzte Verkäufe</h3>
+          <ul class="sales-list" id="salesList"></ul>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ PRODUKTE ============ -->
+  <main id="view-products" class="view">
+    <div class="pe-wrap">
+      <div class="pe-toolbar">
+        <button class="btn" id="addProduct">+ Neues Produkt</button>
+        <span class="spacer"></span>
+        <button class="btn ghost small" id="exportBackup">Backup speichern</button>
+        <label class="btn ghost small file">Backup laden<input type="file" id="importBackup" accept="application/json,.json" hidden></label>
+        <button class="btn ghost small danger" id="resetProducts">Standard-Produkte</button>
+      </div>
+      <p class="hint">Änderungen werden sofort gespeichert. Option ohne Preis = Grundpreis des Produkts.</p>
+      <div id="productEditor"></div>
+    </div>
+  </main>
+
+  <!-- ============ DIALOGE ============ -->
+  <div class="modal" id="payModal" hidden>
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2>Kassieren</h2>
+        <button class="btn ghost small" data-close>✕</button>
+      </div>
+      <div class="pay-total" id="payTotal"></div>
+      <p class="label">Gegeben – Tippen bucht sofort:</p>
+      <div class="quick-given" id="quickGiven"></div>
+      <div class="pay-custom">
+        <div class="numpad-display" id="givenDisplay">0,00 €</div>
+        <div class="numpad" id="givenPad"></div>
+        <div class="change-preview" id="changePreview"></div>
+        <button class="btn pay" id="givenOk">Buchen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="doneModal" hidden>
+    <div class="sheet done">
+      <p class="label">Rückgeld</p>
+      <div class="change-big" id="changeBig"></div>
+      <p class="done-sub" id="doneSub"></p>
+      <div class="done-actions">
+        <button class="btn ghost" id="undoSale">Rückgängig</button>
+        <button class="btn pay" id="doneOk">Nächster Kunde</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="amountModal" hidden>
+    <div class="sheet narrow">
+      <div class="sheet-head">
+        <h2 id="amountTitle">Betrag</h2>
+        <button class="btn ghost small" data-close>✕</button>
+      </div>
+      <div class="numpad-display" id="amountDisplay">0,00 €</div>
+      <div class="numpad" id="amountPad"></div>
+      <button class="btn pay" id="amountOk">Hinzufügen</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
